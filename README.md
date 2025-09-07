@@ -1,6 +1,10 @@
 # Rust Browser
 
-A desktop web browser application built with Rust, GTK4, and WebKit2GTK. This project provides a simple, functional web browser with navigation controls, history management, and keyboard shortcuts.
+A desktop web browser application built with Rust, GTK4, and WebKit2GTK. 
+
+The object of this exercise was to create the most simplistic browser possible focussing on speed to display as the primary goal.
+
+This project provides a simple, functional web browser with navigation controls and keyboard shortcuts.
 
 ## Features
 
