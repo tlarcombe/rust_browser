@@ -1,30 +1,26 @@
-# Rust Browser Engine
+# Rust Browser
 
-A modern, high-performance browser engine written in Rust. This project implements core browser technologies including HTML parsing, CSS styling, layout computation, and rendering.
+A desktop web browser application built with Rust, GTK4, and WebKit2GTK. This project provides a simple, functional web browser with navigation controls, history management, and keyboard shortcuts.
 
 ## Features
 
-- **HTML Parser**: Full HTML5 parsing with DOM tree construction
-- **CSS Engine**: Complete CSS parsing and style computation
-- **Layout System**: Advanced layout engine supporting:
-  - Box model calculations
-  - Flexbox layout
-  - CSS Grid layout
-  - Responsive design
-- **Rendering Engine**: High-performance rendering with GPU acceleration support
-- **Networking**: Asynchronous HTTP/HTTPS request handling
-- **Resource Loading**: Efficient loading and caching of web resources
+- **Web Navigation**: Load and display web pages using WebKit rendering engine
+- **Navigation Controls**: Back/forward buttons with history support
+- **Address Bar**: URL entry with automatic HTTPS formatting
+- **Keyboard Shortcuts**: 
+  - `Ctrl+O` - Focus address bar
+  - `Alt+Left` - Navigate back
+  - `Alt+Right` - Navigate forward
+- **Status Bar**: Shows loading status and current page information
+- **History Management**: Tracks visited pages for navigation
 
 ## Architecture
 
-The browser engine is built with a modular architecture:
+The application is built with a single-file architecture using:
 
-- `html_parser` - HTML document parsing and DOM construction
-- `css_parser` - CSS stylesheet parsing and rule matching
-- `layout` - Layout computation and positioning algorithms
-- `render` - Graphics rendering and display
-- `network` - HTTP client and resource fetching
-- `dom` - Document Object Model implementation
+- **GTK4**: Cross-platform GUI toolkit for the user interface
+- **WebKit2GTK**: WebKit-based web engine for rendering web content
+- **Rust**: Memory-safe systems programming language
 
 ## Installation
 
@@ -32,6 +28,24 @@ The browser engine is built with a modular architecture:
 
 - [Rust](https://rustup.rs/) (version 1.70 or later)
 - [Git](https://git-scm.com/)
+- GTK4 development libraries
+- WebKit2GTK development libraries
+
+#### On Ubuntu/Debian:
+```bash
+sudo apt update
+sudo apt install libgtk-4-dev libwebkit2gtk-4.1-dev build-essential
+```
+
+#### On Fedora:
+```bash
+sudo dnf install gtk4-devel webkit2gtk4.1-devel
+```
+
+#### On Arch Linux:
+```bash
+sudo pacman -S gtk4 webkit2gtk-4.1
+```
 
 ### Building from Source
 
@@ -76,35 +90,21 @@ cargo clippy
 
 ### Basic Usage
 
-```rust
-use rust_browser::*;
-
-fn main() {
-    // Create a new browser instance
-    let mut browser = Browser::new();
-    
-    // Load and render a web page
-    browser.navigate("https://example.com").await;
-}
+1. Run the browser:
+```bash
+cargo run
 ```
 
-### API Examples
+2. The browser will start with a test page displayed
+3. Type a URL in the address bar and press Enter to navigate
+4. Use the back/forward buttons or keyboard shortcuts to navigate
 
-#### HTML Parsing
-```rust
-use rust_browser::html_parser::HtmlParser;
+### Keyboard Shortcuts
 
-let html = "<html><body><h1>Hello World</h1></body></html>";
-let dom = HtmlParser::parse(html);
-```
-
-#### CSS Styling
-```rust
-use rust_browser::css_parser::CssParser;
-
-let css = "h1 { color: blue; font-size: 24px; }";
-let stylesheet = CssParser::parse(css);
-```
+- **Ctrl+O**: Focus the address bar and select all text
+- **Alt+Left**: Go back in history
+- **Alt+Right**: Go forward in history
+- **Enter**: Navigate to URL in address bar
 
 ## Development
 
@@ -112,15 +112,15 @@ let stylesheet = CssParser::parse(css);
 
 ```
 src/
-├── main.rs          # Application entry point
-├── browser.rs       # Main browser engine
-├── html_parser/     # HTML parsing modules
-├── css_parser/      # CSS parsing modules  
-├── layout/          # Layout computation
-├── render/          # Rendering engine
-├── network/         # Networking components
-└── dom/             # DOM implementation
+└── main.rs          # Complete browser application
 ```
+
+The entire application is contained in a single `main.rs` file with:
+- `Browser` struct managing the GTK window and WebKit view
+- Navigation controls (back/forward buttons, address bar)
+- History management with Vec-based storage
+- Event handling for user interactions
+- Keyboard shortcut support
 
 ### Contributing
 
@@ -136,50 +136,44 @@ src/
 
 ### Testing
 
-Run the full test suite:
+Run the test suite:
 ```bash
 cargo test
 ```
 
-Run specific test modules:
-```bash
-cargo test html_parser
-cargo test css_parser
-cargo test layout
-```
+Test the browser manually:
+1. Run `cargo run`
+2. Try navigating to different websites
+3. Test keyboard shortcuts
+4. Verify back/forward functionality
 
 ## Dependencies
 
 Key dependencies include:
 
-- `html5ever` - HTML parsing
-- `cssparser` - CSS parsing
-- `tokio` - Async runtime
-- `reqwest` - HTTP client
-- `winit` - Window management
-- `wgpu` - Graphics API
-- `serde` - Serialization
+- `gtk4` - GTK4 bindings for Rust
+- `webkit2gtk` - WebKit2GTK bindings for web rendering
+- `gdk` - GDK bindings for keyboard events
 
 See `Cargo.toml` for the complete dependency list.
 
 ## Performance
 
-The browser engine is designed for high performance:
+The browser leverages WebKit's performance optimizations:
 
-- Zero-copy parsing where possible
-- GPU-accelerated rendering
-- Efficient memory management
-- Parallel layout computation
-- Optimized network requests
+- Hardware-accelerated rendering via WebKit
+- Efficient memory management through Rust's ownership system
+- Fast startup time with minimal dependencies
+- Responsive UI built on GTK4's modern event system
 
 ## Browser Compatibility
 
-Currently supports:
+Supports modern web standards through WebKit:
 
-- HTML5 standard features
-- CSS3 styling and layout
-- Modern web standards
-- Responsive design
+- HTML5 and CSS3
+- JavaScript (ES6+)
+- Modern web APIs
+- Mobile-responsive websites
 
 ## License
 
@@ -187,13 +181,13 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Roadmap
 
-- [ ] JavaScript engine integration
-- [ ] WebGL support  
-- [ ] Service worker support
-- [ ] Progressive Web App features
+- [ ] Bookmarks management
+- [ ] Multiple tabs support
+- [ ] Download manager
+- [ ] Settings/preferences dialog
 - [ ] Developer tools integration
-- [ ] WebAssembly support
+- [ ] Extensions support
 
 ## Acknowledgments
 
-Built with modern Rust ecosystem tools and inspired by other browser engine projects like Servo and Webkit.
+Built with GTK4, WebKit2GTK, and the Rust ecosystem. Thanks to the maintainers of the gtk4-rs and webkit2gtk-rs projects.
