@@ -1,5 +1,5 @@
 [package]
-name = "rust_browser"
+name = "trustbrowser"
 version = "0.1.0"
 edition = "2024"
 

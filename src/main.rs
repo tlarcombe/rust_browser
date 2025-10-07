@@ -1,8 +1,9 @@
 use gtk::prelude::*;
 use gtk::{Application, ApplicationWindow, Box as GtkBox, Button, Entry, Statusbar, Orientation};
-use webkit2gtk::{WebView, WebViewExt};
+use webkit2gtk::{WebView, WebViewExt, NavigationPolicyDecision, PolicyDecisionType, URIRequest};
 use std::rc::Rc;
 use std::cell::RefCell;
+use std::process::Command;
 
 struct Browser {
     window: ApplicationWindow,
@@ -19,7 +20,7 @@ impl Browser {
     fn new(app: &Application) -> Self {
         let window = ApplicationWindow::builder()
             .application(app)
-            .title("Rust Browser")
+            .title("TRustBrowser")
             .default_width(800)
             .default_height(600)
             .build();
@@ -95,6 +96,35 @@ impl Browser {
     }
 
     fn setup_callbacks(&self) {
+        // Set up navigation policy to open links in external browser
+        self.web_view.connect_decide_policy(|_webview, decision, decision_type| {
+            if decision_type == PolicyDecisionType::NavigationAction {
+                if let Some(nav_decision) = decision.dynamic_cast_ref::<NavigationPolicyDecision>() {
+                    if let Some(nav_action) = nav_decision.navigation_action() {
+                        if let Some(request) = nav_action.request() {
+                            if let Some(uri) = request.uri() {
+                                let uri_str = uri.as_str();
+
+                                // Only allow the initial WhatsApp Web page and same-origin navigation
+                                if uri_str.starts_with("https://web.whatsapp.com") {
+                                    decision.use_();
+                                    return true;
+                                } else {
+                                    // Open external links in chromium
+                                    let _ = Command::new("/usr/bin/chromium")
+                                        .arg(uri_str)
+                                        .spawn();
+                                    decision.ignore();
+                                    return true;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            false
+        });
+
         let web_view_clone = self.web_view.clone();
         let history_clone = self.history.clone();
         let current_index_clone = self.current_index.clone();
@@ -249,41 +279,22 @@ impl Browser {
 
     fn show(&self) {
         self.window.present();
-        
-        // Load a simple test page to show the browser is working
-        let test_html = r#"
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <title>Rust Browser - Test Page</title>
-                <style>
-                    body { font-family: Arial, sans-serif; margin: 40px; }
-                    h1 { color: #333; }
-                    .info { background: #f0f8ff; padding: 20px; border-radius: 5px; }
-                </style>
-            </head>
-            <body>
-                <h1>🦀 Rust Browser Working!</h1>
-                <div class="info">
-                    <p><strong>Controls:</strong></p>
-                    <ul>
-                        <li><kbd>Ctrl+O</kbd> - Focus address bar</li>
-                        <li><kbd>Alt+Left</kbd> - Go back</li>
-                        <li><kbd>Alt+Right</kbd> - Go forward</li>
-                    </ul>
-                    <p>Type a URL in the address bar above and press Enter to navigate!</p>
-                </div>
-            </body>
-            </html>
-        "#;
-        
-        self.web_view.load_html(test_html, None);
+
+        // Load WhatsApp Web on launch
+        self.web_view.load_uri("https://web.whatsapp.com");
+        self.url_entry.set_text("https://web.whatsapp.com");
+
+        // Add to history
+        let mut history = self.history.borrow_mut();
+        let mut index = self.current_index.borrow_mut();
+        history.push("https://web.whatsapp.com".to_string());
+        *index = 0;
     }
 }
 
 fn main() {
     let app = Application::builder()
-        .application_id("com.rustbrowser.app")
+        .application_id("com.trustbrowser.app")
         .build();
 
     app.connect_activate(|app| {
