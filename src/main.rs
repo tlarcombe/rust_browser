@@ -1,6 +1,6 @@
 use gtk::prelude::*;
 use gtk::{Application, ApplicationWindow, Box as GtkBox, Button, Entry, Statusbar, Orientation};
-use webkit2gtk::{WebView, WebViewExt, NavigationPolicyDecision, PolicyDecisionType, URIRequest};
+use webkit2gtk::{WebView, WebViewExt, NavigationPolicyDecision, PolicyDecisionType, PolicyDecisionExt, NavigationPolicyDecisionExt, URIRequestExt};
 use std::rc::Rc;
 use std::cell::RefCell;
 use std::process::Command;
@@ -100,23 +100,21 @@ impl Browser {
         self.web_view.connect_decide_policy(|_webview, decision, decision_type| {
             if decision_type == PolicyDecisionType::NavigationAction {
                 if let Some(nav_decision) = decision.dynamic_cast_ref::<NavigationPolicyDecision>() {
-                    if let Some(nav_action) = nav_decision.navigation_action() {
-                        if let Some(request) = nav_action.request() {
-                            if let Some(uri) = request.uri() {
-                                let uri_str = uri.as_str();
+                    if let Some(request) = nav_decision.request() {
+                        if let Some(uri) = request.uri() {
+                            let uri_str = uri.as_str();
 
-                                // Only allow the initial WhatsApp Web page and same-origin navigation
-                                if uri_str.starts_with("https://web.whatsapp.com") {
-                                    decision.use_();
-                                    return true;
-                                } else {
-                                    // Open external links in chromium
-                                    let _ = Command::new("/usr/bin/chromium")
-                                        .arg(uri_str)
-                                        .spawn();
-                                    decision.ignore();
-                                    return true;
-                                }
+                            // Only allow the initial WhatsApp Web page and same-origin navigation
+                            if uri_str.starts_with("https://web.whatsapp.com") {
+                                decision.use_();
+                                return true;
+                            } else {
+                                // Open external links in chromium
+                                let _ = Command::new("/usr/bin/chromium")
+                                    .arg(uri_str)
+                                    .spawn();
+                                decision.ignore();
+                                return true;
                             }
                         }
                     }
