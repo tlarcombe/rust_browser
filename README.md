@@ -2,7 +2,7 @@
 
 A desktop web browser application built with Rust, GTK4, and WebKit2GTK.
 
-The object of this exercise was to create the most simplistic browser possible focussing on speed to display as the primary goal.
+The object of this exercise was to create the most simplistic browser possible focussing on speed to display as the primary goal.  The main use case was as a place to run the WhatsApp web interface without the crashes experienced using mainstream browsers (being a Linux user there is no native application available - cheers Meta - https://larcombe.tech/blog/meta-whatsapp-data-strategy.html). 
 
 This project provides a simple, functional web browser with navigation controls, history management, and keyboard shortcuts. TRustBrowser stands for Tony's Rust Browser.
 
