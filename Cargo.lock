@@ -541,17 +541,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "rust_browser"
-version = "0.1.0"
-dependencies = [
- "gdk",
- "gio",
- "glib",
- "gtk",
- "webkit2gtk",
-]
-
-[[package]]
 name = "rustc_version"
 version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -736,6 +725,18 @@ dependencies = [
  "serde_spanned",
  "toml_datetime",
  "winnow",
+]
+
+[[package]]
+name = "trustbrowser"
+version = "0.1.0"
+dependencies = [
+ "gdk",
+ "gdk-pixbuf",
+ "gio",
+ "glib",
+ "gtk",
+ "webkit2gtk",
 ]
 
 [[package]]

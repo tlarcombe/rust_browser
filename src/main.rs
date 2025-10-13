@@ -1,9 +1,11 @@
 use gtk::prelude::*;
 use gtk::{Application, ApplicationWindow, Box as GtkBox, Button, Entry, Statusbar, Orientation};
 use webkit2gtk::{WebView, WebViewExt, NavigationPolicyDecision, PolicyDecisionType, PolicyDecisionExt, NavigationPolicyDecisionExt, URIRequestExt};
+use gdk_pixbuf::Pixbuf;
 use std::rc::Rc;
 use std::cell::RefCell;
 use std::process::Command;
+use std::path::Path;
 
 struct Browser {
     window: ApplicationWindow,
@@ -24,9 +26,26 @@ impl Browser {
             .default_width(800)
             .default_height(600)
             .build();
-        
+
         window.set_position(gtk::WindowPosition::Center);
         window.set_resizable(true);
+
+        // Set window icon - try multiple sizes, starting with the largest
+        let icon_paths = [
+            "icons/trustbrowser-256.png",
+            "icons/trustbrowser-128.png",
+            "icons/trustbrowser-64.png",
+            "icons/trustbrowser-48.png",
+        ];
+
+        for icon_path in &icon_paths {
+            if Path::new(icon_path).exists() {
+                if let Ok(pixbuf) = Pixbuf::from_file(icon_path) {
+                    window.set_icon(Some(&pixbuf));
+                    break;
+                }
+            }
+        }
 
         let main_box = GtkBox::new(Orientation::Vertical, 0);
         window.add(&main_box);
