@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=TRustBrowser WhatsApp
+Comment=WhatsApp Web in TRustBrowser
+Exec=%h/.local/bin/rbrowser whatsapp
+Icon=%h/.local/share/icons/trustbrowser.png
+Terminal=false
+Type=Application
+Categories=Network;InstantMessaging;
+StartupNotify=true
+StartupWMClass=trustbrowser

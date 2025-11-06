@@ -1,0 +1,13 @@
+#!/bin/bash
+# Launch TRustBrowser for WhatsApp Web
+
+# Get the directory where this script is located
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+
+# Check if we should use the installed version or the local build
+if [ -x "$HOME/.local/bin/rbrowser" ]; then
+    cd "$PROJECT_DIR" && "$HOME/.local/bin/rbrowser" whatsapp
+else
+    cd "$PROJECT_DIR" && ./target/release/trustbrowser whatsapp
+fi

@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=TRustBrowser Calendar
+Comment=Google Calendar in TRustBrowser
+Exec=%h/.local/bin/rbrowser "google calendar"
+Icon=%h/.local/share/icons/trustbrowser.png
+Terminal=false
+Type=Application
+Categories=Office;Calendar;
+StartupNotify=true
+StartupWMClass=trustbrowser

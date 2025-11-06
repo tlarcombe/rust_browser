@@ -103,54 +103,105 @@ Messenger | https://www.messenger.com/e2ee/t/25417791761168110/
 
 Each line contains a display name and URL separated by a pipe (`|`). Lines starting with `#` are comments.
 
+## Installation
+
+### Quick Install
+
+```bash
+# Build the project
+cargo build --release
+
+# Run the installation script
+./install.sh
+```
+
+This will:
+- Install the binary as `rbrowser` in `~/.local/bin/`
+- Install launcher scripts for each site
+- Create desktop menu entries for application launcher
+- Copy config to `~/.config/trustbrowser/sites.conf`
+
+### Manual Installation
+
+If you prefer manual installation:
+```bash
+# Copy binary
+cp target/release/trustbrowser ~/.local/bin/rbrowser
+
+# Create config directory
+mkdir -p ~/.config/trustbrowser
+cp sites.conf ~/.config/trustbrowser/
+
+# Copy launcher scripts (optional)
+cp scripts/rbrowser-* ~/.local/bin/
+
+# Copy desktop files (optional)
+cp desktop-files/*.desktop ~/.local/share/applications/
+update-desktop-database ~/.local/share/applications
+```
+
 ## Usage
 
-### Basic Usage
+### Easy Launching (After Installation)
 
-1. Launch a specific site by its index (starting from 0):
+Once installed, you have multiple ways to launch:
+
+**1. From Application Menu**
+- Search for "TRustBrowser WhatsApp", "TRustBrowser Calendar", or "TRustBrowser Messenger"
+- Click to launch
+
+**2. Using Named Scripts**
 ```bash
-# Run WhatsApp (index 0)
-cargo run 0
+rbrowser-whatsapp     # Launch WhatsApp
+rbrowser-calendar     # Launch Google Calendar
+rbrowser-messenger    # Launch Messenger
+rbrowser-all          # Launch all three at once
+```
 
-# Run Google Calendar (index 1)
+**3. Using Site Names**
+```bash
+rbrowser whatsapp              # Launch by name
+rbrowser messenger             # Case-insensitive
+rbrowser "google calendar"     # Spaces need quotes
+rbrowser --list                # Show available sites
+```
+
+**4. Using Index Numbers**
+```bash
+rbrowser 0    # WhatsApp (first site)
+rbrowser 1    # Google Calendar (second site)
+rbrowser 2    # Messenger (third site)
+```
+
+### Development Usage
+
+When working on the code, use cargo:
+
+```bash
+# Launch by site name
+cargo run whatsapp
+cargo run messenger
+
+# Launch by index
+cargo run 0
 cargo run 1
 
-# Run Messenger (index 2)
-cargo run 2
-```
-
-2. Run all three instances at once:
-```bash
-cargo run 0 &
-cargo run 1 &
-cargo run 2 &
-```
-
-3. If no index is specified, the first site (index 0) is loaded:
-```bash
-cargo run
-# Equivalent to: cargo run 0
-```
-
-### Using the Release Build
-
-For better performance, use the release build:
-```bash
-./target/release/trustbrowser 0  # WhatsApp
-./target/release/trustbrowser 1  # Google Calendar
-./target/release/trustbrowser 2  # Messenger
+# List available sites
+cargo run -- --list
 ```
 
 ### Adding New Sites
 
-Edit `sites.conf` and add a new line:
+Edit `~/.config/trustbrowser/sites.conf` (or `sites.conf` in project directory):
 ```
 GitHub | https://github.com
+YouTube | https://youtube.com
 ```
 
-Then run with the appropriate index:
+Then launch with:
 ```bash
-cargo run 3  # For the fourth entry (GitHub)
+rbrowser github    # By name
+rbrowser 3         # By index
 ```
 
 ### Navigation Behavior
@@ -158,6 +209,16 @@ cargo run 3  # For the fourth entry (GitHub)
 - **Domain Isolation**: Each instance only navigates within its configured domain
 - **External Links**: Clicking links to external domains opens them in Chromium
 - **No Navigation Controls**: The interface is minimal - no back/forward buttons or address bar
+- **Independent Sessions**: Each site runs in its own process with separate cookies and storage
+
+## File Locations
+
+After installation:
+- **Binary**: `~/.local/bin/rbrowser`
+- **Config**: `~/.config/trustbrowser/sites.conf`
+- **Launcher scripts**: `~/.local/bin/rbrowser-*`
+- **Desktop files**: `~/.local/share/applications/rbrowser-*.desktop`
+- **Icon**: `~/.local/share/icons/trustbrowser.png`
 
 ## Development
 

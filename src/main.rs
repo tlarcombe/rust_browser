@@ -136,48 +136,83 @@ impl Browser {
 
 // Load configuration from sites.conf file
 fn load_config() -> Vec<(String, String)> {
-    let config_path = "sites.conf";
+    // Try multiple config locations in order of preference
+    let home = env::var("HOME").unwrap_or_else(|_| ".".to_string());
+    let config_paths = vec![
+        format!("{}/.config/trustbrowser/sites.conf", home),  // Installed location
+        "sites.conf".to_string(),                              // Current directory
+    ];
 
-    if let Ok(contents) = fs::read_to_string(config_path) {
-        contents
-            .lines()
-            .filter(|line| !line.trim().is_empty() && !line.trim().starts_with('#'))
-            .map(|line| {
-                let parts: Vec<&str> = line.splitn(2, '|').collect();
-                if parts.len() == 2 {
-                    (parts[0].trim().to_string(), parts[1].trim().to_string())
-                } else {
-                    ("Unknown".to_string(), line.trim().to_string())
-                }
-            })
-            .collect()
-    } else {
-        // Default sites if config file doesn't exist
-        vec![
-            ("WhatsApp".to_string(), "https://web.whatsapp.com".to_string()),
-            ("Google Calendar".to_string(), "https://calendar.google.com/calendar/u/0/r".to_string()),
-            ("Messenger".to_string(), "https://www.messenger.com/e2ee/t/25417791761168110/".to_string()),
-        ]
+    for config_path in config_paths {
+        if let Ok(contents) = fs::read_to_string(&config_path) {
+            return contents
+                .lines()
+                .filter(|line| !line.trim().is_empty() && !line.trim().starts_with('#'))
+                .map(|line| {
+                    let parts: Vec<&str> = line.splitn(2, '|').collect();
+                    if parts.len() == 2 {
+                        (parts[0].trim().to_string(), parts[1].trim().to_string())
+                    } else {
+                        ("Unknown".to_string(), line.trim().to_string())
+                    }
+                })
+                .collect();
+        }
     }
+
+    // Default sites if no config file found
+    vec![
+        ("WhatsApp".to_string(), "https://web.whatsapp.com".to_string()),
+        ("Google Calendar".to_string(), "https://calendar.google.com/calendar/u/0/r".to_string()),
+        ("Messenger".to_string(), "https://www.messenger.com/e2ee/t/25417791761168110/".to_string()),
+    ]
 }
 
 fn main() {
     // Load sites configuration
     let sites = load_config();
 
-    // Get site index from command line argument (default to 0)
+    // Parse command line arguments
     let args: Vec<String> = env::args().collect();
+
+    // Handle --list flag
+    if args.len() > 1 && (args[1] == "--list" || args[1] == "-l") {
+        println!("Available sites:");
+        for (i, (name, url)) in sites.iter().enumerate() {
+            println!("  [{}] {} - {}", i, name, url);
+        }
+        std::process::exit(0);
+    }
+
+    // Determine site index from argument (number or name)
     let site_index: usize = if args.len() > 1 {
-        args[1].parse().unwrap_or(0)
+        let arg = &args[1];
+
+        // Try to parse as number first
+        if let Ok(index) = arg.parse::<usize>() {
+            index
+        } else {
+            // Try to match by name (case-insensitive)
+            let arg_lower = arg.to_lowercase();
+            sites.iter()
+                .position(|(name, _)| name.to_lowercase() == arg_lower)
+                .unwrap_or_else(|| {
+                    eprintln!("Error: Site '{}' not found. Available sites:", arg);
+                    for (i, (name, url)) in sites.iter().enumerate() {
+                        eprintln!("  [{}] {} - {}", i, name, url);
+                    }
+                    std::process::exit(1);
+                })
+        }
     } else {
-        0
+        0  // Default to first site
     };
 
     // Validate site index
     if site_index >= sites.len() {
         eprintln!("Error: Site index {} is out of range. Available sites:", site_index);
         for (i, (name, url)) in sites.iter().enumerate() {
-            eprintln!("  {}: {} - {}", i, name, url);
+            eprintln!("  [{}] {} - {}", i, name, url);
         }
         std::process::exit(1);
     }
