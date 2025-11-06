@@ -1,22 +1,20 @@
-# TRustBrowser
+# TRustBrowser - Multi-Instance Edition
 
-A desktop web browser application built with Rust, GTK4, and WebKit2GTK.
+A minimal, focused desktop web browser application built with Rust, GTK4, and WebKit2GTK.
 
-The object of this exercise was to create the most simplistic browser possible focussing on speed to display as the primary goal.  The main use case was as a place to run the WhatsApp web interface without the crashes experienced using mainstream browsers (being a Linux user there is no native application available - cheers Meta - https://larcombe.tech/blog/meta-whatsapp-data-strategy.html). 
+The object of this exercise was to create the most simplistic browser possible focussing on speed to display as the primary goal.  The main use case was as a place to run web applications like WhatsApp Web, Google Calendar, and Messenger without the crashes experienced using mainstream browsers (being a Linux user there is no native application available - cheers Meta - https://larcombe.tech/blog/meta-whatsapp-data-strategy.html).
 
-This project provides a simple, functional web browser with navigation controls, history management, and keyboard shortcuts. TRustBrowser stands for Tony's Rust Browser.
+This branch features a **multi-instance** design where each browser window loads a single configured URL from a config file. You can run multiple instances simultaneously, each dedicated to a specific web application. TRustBrowser stands for Tony's Rust Browser.
 
 ## Features
 
-- **Web Navigation**: Load and display web pages using WebKit rendering engine
-- **Navigation Controls**: Back/forward buttons with history support
-- **Address Bar**: URL entry with automatic HTTPS formatting
-- **Keyboard Shortcuts**: 
-  - `Ctrl+O` - Focus address bar
-  - `Alt+Left` - Navigate back
-  - `Alt+Right` - Navigate forward
+- **Multi-Instance Support**: Run multiple browser windows simultaneously, each dedicated to a specific web application
+- **Config-Based URLs**: Load sites from a simple configuration file (`sites.conf`)
+- **Minimal UI**: Clean interface with no navigation controls - just the web content and a status bar
+- **Domain Isolation**: Each instance stays within its configured domain; external links open in the default browser (Chromium)
+- **Web Rendering**: Uses WebKit rendering engine for full modern web standards support
 - **Status Bar**: Shows loading status and current page information
-- **History Management**: Tracks visited pages for navigation
+- **Lightweight**: Fast startup with minimal resource usage
 
 ## Architecture
 
@@ -90,25 +88,76 @@ cargo fmt
 cargo clippy
 ```
 
+## Configuration
+
+The browser loads URLs from a `sites.conf` file in the project directory. The format is simple:
+
+```
+# TRustBrowser Sites Configuration
+# Format: Name | URL
+
+WhatsApp | https://web.whatsapp.com
+Google Calendar | https://calendar.google.com/calendar/u/0/r
+Messenger | https://www.messenger.com/e2ee/t/25417791761168110/
+```
+
+Each line contains a display name and URL separated by a pipe (`|`). Lines starting with `#` are comments.
+
 ## Usage
 
 ### Basic Usage
 
-1. Run the browser:
+1. Launch a specific site by its index (starting from 0):
 ```bash
-cargo run
+# Run WhatsApp (index 0)
+cargo run 0
+
+# Run Google Calendar (index 1)
+cargo run 1
+
+# Run Messenger (index 2)
+cargo run 2
 ```
 
-2. The browser will start with a test page displayed
-3. Type a URL in the address bar and press Enter to navigate
-4. Use the back/forward buttons or keyboard shortcuts to navigate
+2. Run all three instances at once:
+```bash
+cargo run 0 &
+cargo run 1 &
+cargo run 2 &
+```
 
-### Keyboard Shortcuts
+3. If no index is specified, the first site (index 0) is loaded:
+```bash
+cargo run
+# Equivalent to: cargo run 0
+```
 
-- **Ctrl+O**: Focus the address bar and select all text
-- **Alt+Left**: Go back in history
-- **Alt+Right**: Go forward in history
-- **Enter**: Navigate to URL in address bar
+### Using the Release Build
+
+For better performance, use the release build:
+```bash
+./target/release/trustbrowser 0  # WhatsApp
+./target/release/trustbrowser 1  # Google Calendar
+./target/release/trustbrowser 2  # Messenger
+```
+
+### Adding New Sites
+
+Edit `sites.conf` and add a new line:
+```
+GitHub | https://github.com
+```
+
+Then run with the appropriate index:
+```bash
+cargo run 3  # For the fourth entry (GitHub)
+```
+
+### Navigation Behavior
+
+- **Domain Isolation**: Each instance only navigates within its configured domain
+- **External Links**: Clicking links to external domains opens them in Chromium
+- **No Navigation Controls**: The interface is minimal - no back/forward buttons or address bar
 
 ## Development
 
@@ -117,14 +166,15 @@ cargo run
 ```
 src/
 └── main.rs          # Complete browser application
+sites.conf           # URL configuration file
 ```
 
 The entire application is contained in a single `main.rs` file with:
 - `Browser` struct managing the GTK window and WebKit view
-- Navigation controls (back/forward buttons, address bar)
-- History management with Vec-based storage
-- Event handling for user interactions
-- Keyboard shortcut support
+- `load_config()` function to parse `sites.conf`
+- Domain-based navigation policy
+- Multi-instance support via unique application IDs
+- Clean, minimal UI focused on content
 
 ### Contributing
 
@@ -185,12 +235,30 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Roadmap
 
-- [ ] Bookmarks management
-- [ ] Multiple tabs support
-- [ ] Download manager
-- [ ] Settings/preferences dialog
-- [ ] Developer tools integration
-- [ ] Extensions support
+- [ ] Desktop file entries for easy launching from application menu
+- [ ] System tray integration for quick instance switching
+- [ ] Automatic browser selection based on URL patterns
+- [ ] Session persistence and restore
+- [ ] Optional notification support for web apps
+- [ ] Custom per-site settings (zoom level, user agent)
+
+## Branch Differences
+
+This `multi-instance` branch differs from the `master` branch:
+
+**Master branch** features:
+- Single browser window with full navigation controls
+- Address bar for entering URLs
+- Back/forward buttons
+- History management
+- Keyboard shortcuts for navigation
+
+**Multi-instance branch** features (this branch):
+- Multiple independent browser instances
+- Config file-based URL loading
+- Minimal UI without navigation controls
+- Domain isolation per instance
+- Dedicated to specific web applications
 
 ## Acknowledgments
 

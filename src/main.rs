@@ -1,28 +1,24 @@
 use gtk::prelude::*;
-use gtk::{Application, ApplicationWindow, Box as GtkBox, Button, Entry, Statusbar, Orientation};
+use gtk::{Application, ApplicationWindow, Box as GtkBox, Statusbar, Orientation};
 use webkit2gtk::{WebView, WebViewExt, NavigationPolicyDecision, PolicyDecisionType, PolicyDecisionExt, NavigationPolicyDecisionExt, URIRequestExt};
 use gdk_pixbuf::Pixbuf;
-use std::rc::Rc;
-use std::cell::RefCell;
 use std::process::Command;
 use std::path::Path;
+use std::fs;
+use std::env;
 
 struct Browser {
     window: ApplicationWindow,
     web_view: WebView,
-    url_entry: Entry,
     status_bar: Statusbar,
-    back_button: Button,
-    forward_button: Button,
-    history: Rc<RefCell<Vec<String>>>,
-    current_index: Rc<RefCell<usize>>,
+    url: String,
 }
 
 impl Browser {
-    fn new(app: &Application) -> Self {
+    fn new(app: &Application, url: String, title: &str) -> Self {
         let window = ApplicationWindow::builder()
             .application(app)
-            .title("TRustBrowser")
+            .title(title)
             .default_width(800)
             .default_height(600)
             .build();
@@ -50,36 +46,6 @@ impl Browser {
         let main_box = GtkBox::new(Orientation::Vertical, 0);
         window.add(&main_box);
 
-        let nav_box = GtkBox::new(Orientation::Horizontal, 5);
-        nav_box.set_margin_top(5);
-        nav_box.set_margin_bottom(5);
-        nav_box.set_margin_start(5);
-        nav_box.set_margin_end(5);
-
-        let back_button = Button::with_label("←");
-        back_button.set_tooltip_text(Some("Back (Alt+Left)"));
-        back_button.set_sensitive(false);
-        
-        let forward_button = Button::with_label("→");
-        forward_button.set_tooltip_text(Some("Forward (Alt+Right)"));
-        forward_button.set_sensitive(false);
-
-        let url_entry = Entry::new();
-        url_entry.set_placeholder_text(Some("Enter URL here and press Enter"));
-        url_entry.set_hexpand(true);
-        
-        // Add a button to focus the URL entry for testing
-        let focus_button = Button::with_label("Focus URL");
-        let url_entry_for_focus = url_entry.clone();
-        focus_button.connect_clicked(move |_| {
-            url_entry_for_focus.grab_focus();
-        });
-
-        nav_box.pack_start(&back_button, false, false, 0);
-        nav_box.pack_start(&forward_button, false, false, 0);
-        nav_box.pack_start(&url_entry, true, true, 0);
-        nav_box.pack_start(&focus_button, false, false, 0);
-
         let web_view = WebView::new();
         web_view.set_vexpand(true);
         web_view.set_hexpand(true);
@@ -89,42 +55,41 @@ impl Browser {
         status_bar.push(status_context, "Ready");
         status_bar.show();
 
-        main_box.pack_start(&nav_box, false, false, 0);
         main_box.pack_start(&web_view, true, true, 0);
         main_box.pack_start(&status_bar, false, false, 0);
-        
+
         // Make sure all widgets are visible
-        nav_box.show_all();
         web_view.show();
         status_bar.show();
         main_box.show_all();
 
-        let history = Rc::new(RefCell::new(Vec::new()));
-        let current_index = Rc::new(RefCell::new(0));
-
         Self {
             window,
             web_view,
-            url_entry,
             status_bar,
-            back_button,
-            forward_button,
-            history,
-            current_index,
+            url,
         }
     }
 
     fn setup_callbacks(&self) {
-        // Set up navigation policy to open links in external browser
-        self.web_view.connect_decide_policy(|_webview, decision, decision_type| {
+        let url = self.url.clone();
+
+        // Set up navigation policy to keep links within the same domain
+        self.web_view.connect_decide_policy(move |_webview, decision, decision_type| {
             if decision_type == PolicyDecisionType::NavigationAction {
                 if let Some(nav_decision) = decision.dynamic_cast_ref::<NavigationPolicyDecision>() {
                     if let Some(request) = nav_decision.request() {
                         if let Some(uri) = request.uri() {
                             let uri_str = uri.as_str();
 
-                            // Only allow the initial WhatsApp Web page and same-origin navigation
-                            if uri_str.starts_with("https://web.whatsapp.com") {
+                            // Extract the base domain from the configured URL
+                            let base_domain = url.split("://")
+                                .nth(1)
+                                .and_then(|s| s.split('/').next())
+                                .unwrap_or("");
+
+                            // Only allow navigation within the same domain
+                            if uri_str.contains(base_domain) {
                                 decision.use_();
                                 return true;
                             } else {
@@ -143,179 +108,91 @@ impl Browser {
         });
 
         let web_view_clone = self.web_view.clone();
-        let history_clone = self.history.clone();
-        let current_index_clone = self.current_index.clone();
-        let back_button_clone = self.back_button.clone();
-        let forward_button_clone = self.forward_button.clone();
-
-        self.url_entry.connect_activate(move |entry| {
-            let url = entry.text().to_string();
-            if !url.is_empty() {
-                let formatted_url = if !url.starts_with("http://") && !url.starts_with("https://") {
-                    format!("https://{}", url)
-                } else {
-                    url.clone()
-                };
-                
-                web_view_clone.load_uri(&formatted_url);
-                
-                let mut history = history_clone.borrow_mut();
-                let mut index = current_index_clone.borrow_mut();
-                
-                history.truncate(*index + 1);
-                history.push(formatted_url);
-                *index = history.len() - 1;
-                
-                back_button_clone.set_sensitive(*index > 0);
-                forward_button_clone.set_sensitive(false);
-            }
-        });
-
-        let web_view_clone2 = self.web_view.clone();
-        let status_bar_clone2 = self.status_bar.clone();
+        let status_bar_clone = self.status_bar.clone();
         self.web_view.connect_load_changed(move |_, load_event| {
-            let status_context = status_bar_clone2.context_id("main");
+            let status_context = status_bar_clone.context_id("main");
             match load_event {
                 webkit2gtk::LoadEvent::Started => {
-                    status_bar_clone2.push(status_context, "Loading...");
+                    status_bar_clone.push(status_context, "Loading...");
                 }
                 webkit2gtk::LoadEvent::Finished => {
-                    if let Some(uri) = web_view_clone2.uri() {
-                        status_bar_clone2.push(status_context, &format!("Loaded: {}", uri));
+                    if let Some(uri) = web_view_clone.uri() {
+                        status_bar_clone.push(status_context, &format!("Loaded: {}", uri));
                     } else {
-                        status_bar_clone2.push(status_context, "Loaded");
+                        status_bar_clone.push(status_context, "Loaded");
                     }
                 }
                 _ => {}
             }
         });
-
-        let history_clone2 = self.history.clone();
-        let current_index_clone2 = self.current_index.clone();
-        let web_view_clone3 = self.web_view.clone();
-        let back_button_clone2 = self.back_button.clone();
-        let forward_button_clone2 = self.forward_button.clone();
-        let url_entry_clone2 = self.url_entry.clone();
-
-        self.back_button.connect_clicked(move |_| {
-            let mut index = current_index_clone2.borrow_mut();
-            let history = history_clone2.borrow();
-            
-            if *index > 0 {
-                *index -= 1;
-                if let Some(url) = history.get(*index) {
-                    web_view_clone3.load_uri(url);
-                    url_entry_clone2.set_text(url);
-                }
-                
-                back_button_clone2.set_sensitive(*index > 0);
-                forward_button_clone2.set_sensitive(*index < history.len() - 1);
-            }
-        });
-
-        let history_clone3 = self.history.clone();
-        let current_index_clone3 = self.current_index.clone();
-        let web_view_clone4 = self.web_view.clone();
-        let back_button_clone3 = self.back_button.clone();
-        let forward_button_clone3 = self.forward_button.clone();
-        let url_entry_clone3 = self.url_entry.clone();
-
-        self.forward_button.connect_clicked(move |_| {
-            let mut index = current_index_clone3.borrow_mut();
-            let history = history_clone3.borrow();
-            
-            if *index < history.len() - 1 {
-                *index += 1;
-                if let Some(url) = history.get(*index) {
-                    web_view_clone4.load_uri(url);
-                    url_entry_clone3.set_text(url);
-                }
-                
-                back_button_clone3.set_sensitive(*index > 0);
-                forward_button_clone3.set_sensitive(*index < history.len() - 1);
-            }
-        });
-
-        let url_entry_clone4 = self.url_entry.clone();
-        let history_clone4 = self.history.clone();
-        let current_index_clone4 = self.current_index.clone();
-        let web_view_clone5 = self.web_view.clone();
-        let back_button_clone4 = self.back_button.clone();
-        let forward_button_clone4 = self.forward_button.clone();
-        
-        // Set up key event handling after the window is shown
-        self.window.connect_realize(move |window| {
-            // Enable key press events
-            window.set_can_focus(true);
-            window.grab_focus();
-        });
-        
-        self.window.connect_key_press_event(move |_window, event| {
-            let keyval = event.keyval();
-            let state = event.state();
-            
-            if state.contains(gdk::ModifierType::CONTROL_MASK) && keyval == gdk::keys::constants::o {
-                url_entry_clone4.grab_focus();
-                url_entry_clone4.select_region(0, -1);
-                return true.into();
-            } else if state.contains(gdk::ModifierType::MOD1_MASK) && keyval == gdk::keys::constants::Left {
-                let mut index = current_index_clone4.borrow_mut();
-                let history = history_clone4.borrow();
-                
-                if *index > 0 {
-                    *index -= 1;
-                    if let Some(url) = history.get(*index) {
-                        web_view_clone5.load_uri(url);
-                        url_entry_clone4.set_text(url);
-                    }
-                    
-                    back_button_clone4.set_sensitive(*index > 0);
-                    forward_button_clone4.set_sensitive(*index < history.len() - 1);
-                }
-                return true.into();
-            } else if state.contains(gdk::ModifierType::MOD1_MASK) && keyval == gdk::keys::constants::Right {
-                let mut index = current_index_clone4.borrow_mut();
-                let history = history_clone4.borrow();
-                
-                if *index < history.len() - 1 {
-                    *index += 1;
-                    if let Some(url) = history.get(*index) {
-                        web_view_clone5.load_uri(url);
-                        url_entry_clone4.set_text(url);
-                    }
-                    
-                    back_button_clone4.set_sensitive(*index > 0);
-                    forward_button_clone4.set_sensitive(*index < history.len() - 1);
-                }
-                return true.into();
-            }
-            
-            false.into()
-        });
     }
 
     fn show(&self) {
         self.window.present();
+        // Load the configured URL
+        self.web_view.load_uri(&self.url);
+    }
+}
 
-        // Load WhatsApp Web on launch
-        self.web_view.load_uri("https://web.whatsapp.com");
-        self.url_entry.set_text("https://web.whatsapp.com");
+// Load configuration from sites.conf file
+fn load_config() -> Vec<(String, String)> {
+    let config_path = "sites.conf";
 
-        // Add to history
-        let mut history = self.history.borrow_mut();
-        let mut index = self.current_index.borrow_mut();
-        history.push("https://web.whatsapp.com".to_string());
-        *index = 0;
+    if let Ok(contents) = fs::read_to_string(config_path) {
+        contents
+            .lines()
+            .filter(|line| !line.trim().is_empty() && !line.trim().starts_with('#'))
+            .map(|line| {
+                let parts: Vec<&str> = line.splitn(2, '|').collect();
+                if parts.len() == 2 {
+                    (parts[0].trim().to_string(), parts[1].trim().to_string())
+                } else {
+                    ("Unknown".to_string(), line.trim().to_string())
+                }
+            })
+            .collect()
+    } else {
+        // Default sites if config file doesn't exist
+        vec![
+            ("WhatsApp".to_string(), "https://web.whatsapp.com".to_string()),
+            ("Google Calendar".to_string(), "https://calendar.google.com/calendar/u/0/r".to_string()),
+            ("Messenger".to_string(), "https://www.messenger.com/e2ee/t/25417791761168110/".to_string()),
+        ]
     }
 }
 
 fn main() {
+    // Load sites configuration
+    let sites = load_config();
+
+    // Get site index from command line argument (default to 0)
+    let args: Vec<String> = env::args().collect();
+    let site_index: usize = if args.len() > 1 {
+        args[1].parse().unwrap_or(0)
+    } else {
+        0
+    };
+
+    // Validate site index
+    if site_index >= sites.len() {
+        eprintln!("Error: Site index {} is out of range. Available sites:", site_index);
+        for (i, (name, url)) in sites.iter().enumerate() {
+            eprintln!("  {}: {} - {}", i, name, url);
+        }
+        std::process::exit(1);
+    }
+
+    let (site_name, site_url) = sites[site_index].clone();
+    let window_title = format!("TRustBrowser - {}", site_name);
+
+    // Use a unique application ID for each instance to allow multiple instances
+    let app_id = format!("com.trustbrowser.app.instance{}", site_index);
     let app = Application::builder()
-        .application_id("com.trustbrowser.app")
+        .application_id(&app_id)
         .build();
 
-    app.connect_activate(|app| {
-        let browser = Browser::new(app);
+    app.connect_activate(move |app| {
+        let browser = Browser::new(app, site_url.clone(), &window_title);
         browser.setup_callbacks();
         browser.show();
     });
