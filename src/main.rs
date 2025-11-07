@@ -1,8 +1,7 @@
 use gtk::prelude::*;
 use gtk::{Application, ApplicationWindow, Box as GtkBox, Statusbar, Orientation};
-use webkit2gtk::{WebView, WebViewExt, NavigationPolicyDecision, PolicyDecisionType, PolicyDecisionExt, NavigationPolicyDecisionExt, URIRequestExt};
+use webkit2gtk::{WebView, WebViewExt, WebContext, WebContextExt, CookieManagerExt, CookiePersistentStorage};
 use gdk_pixbuf::Pixbuf;
-use std::process::Command;
 use std::path::Path;
 use std::fs;
 use std::env;
@@ -15,7 +14,7 @@ struct Browser {
 }
 
 impl Browser {
-    fn new(app: &Application, url: String, title: &str) -> Self {
+    fn new(app: &Application, url: String, title: &str, data_dir: &str) -> Self {
         let window = ApplicationWindow::builder()
             .application(app)
             .title(title)
@@ -46,7 +45,22 @@ impl Browser {
         let main_box = GtkBox::new(Orientation::Vertical, 0);
         window.add(&main_box);
 
-        let web_view = WebView::new();
+        // Create persistent data directory for this instance
+        let data_path = Path::new(data_dir);
+        fs::create_dir_all(data_path).expect("Failed to create data directory");
+
+        // Create a WebContext for this instance
+        // Note: webkit2gtk automatically uses ~/.local/share/webkitgtk for default context
+        // To have separate contexts per site, we use a unique context
+        let context = WebContext::default().expect("Failed to create WebContext");
+
+        // Configure persistent cookie storage
+        let cookie_manager = context.cookie_manager().expect("Failed to get cookie manager");
+        let cookie_file = format!("{}/cookies.sqlite", data_dir);
+        cookie_manager.set_persistent_storage(&cookie_file, CookiePersistentStorage::Sqlite);
+
+        // Create WebView with the configured context
+        let web_view = WebView::with_context(&context);
         web_view.set_vexpand(true);
         web_view.set_hexpand(true);
 
@@ -188,6 +202,11 @@ fn main() {
     let (site_name, site_url) = sites[site_index].clone();
     let window_title = format!("TRustBrowser - {}", site_name);
 
+    // Create a unique data directory for each site to keep sessions separate
+    let home = env::var("HOME").unwrap_or_else(|_| ".".to_string());
+    let safe_site_name = site_name.to_lowercase().replace(' ', "_");
+    let data_dir = format!("{}/.local/share/trustbrowser/{}", home, safe_site_name);
+
     // Use a unique application ID for each instance to allow multiple instances
     let app_id = format!("com.trustbrowser.app.instance{}", site_index);
     let app = Application::builder()
@@ -195,7 +214,7 @@ fn main() {
         .build();
 
     app.connect_activate(move |app| {
-        let browser = Browser::new(app, site_url.clone(), &window_title);
+        let browser = Browser::new(app, site_url.clone(), &window_title, &data_dir);
         browser.setup_callbacks();
         browser.show();
     });
