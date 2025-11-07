@@ -11,10 +11,11 @@ This branch features a **multi-instance** design where each browser window loads
 - **Multi-Instance Support**: Run multiple browser windows simultaneously, each dedicated to a specific web application
 - **Config-Based URLs**: Load sites from a simple configuration file (`sites.conf`)
 - **Minimal UI**: Clean interface with no navigation controls - just the web content and a status bar
-- **Domain Isolation**: Each instance stays within its configured domain; external links open in the default browser (Chromium)
+- **Full Navigation Support**: Each instance allows full navigation including OAuth flows and login redirects
 - **Web Rendering**: Uses WebKit rendering engine for full modern web standards support
 - **Status Bar**: Shows loading status and current page information
 - **Lightweight**: Fast startup with minimal resource usage
+- **Session Persistence**: Cookies and login sessions persist across restarts
 
 ## Architecture
 
@@ -206,10 +207,10 @@ rbrowser 3         # By index
 
 ### Navigation Behavior
 
-- **Domain Isolation**: Each instance only navigates within its configured domain
-- **External Links**: Clicking links to external domains opens them in Chromium
+- **Full Navigation**: Each instance allows complete navigation within the browser, supporting OAuth flows and login redirects
 - **No Navigation Controls**: The interface is minimal - no back/forward buttons or address bar
 - **Independent Sessions**: Each site runs in its own process with separate cookies and storage
+- **Login Persistence**: Sessions and cookies are saved in `~/.local/share/webkitgtk/` and persist across browser restarts
 
 ## File Locations
 
@@ -233,7 +234,7 @@ sites.conf           # URL configuration file
 The entire application is contained in a single `main.rs` file with:
 - `Browser` struct managing the GTK window and WebKit view
 - `load_config()` function to parse `sites.conf`
-- Domain-based navigation policy
+- Unrestricted navigation for OAuth and login support
 - Multi-instance support via unique application IDs
 - Clean, minimal UI focused on content
 
@@ -296,10 +297,10 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Roadmap
 
-- [ ] Desktop file entries for easy launching from application menu
+- [x] Desktop file entries for easy launching from application menu
+- [x] Session persistence and restore (via WebKit storage)
 - [ ] System tray integration for quick instance switching
 - [ ] Automatic browser selection based on URL patterns
-- [ ] Session persistence and restore
 - [ ] Optional notification support for web apps
 - [ ] Custom per-site settings (zoom level, user agent)
 
@@ -318,8 +319,9 @@ This `multi-instance` branch differs from the `master` branch:
 - Multiple independent browser instances
 - Config file-based URL loading
 - Minimal UI without navigation controls
-- Domain isolation per instance
+- Full navigation support including OAuth flows
 - Dedicated to specific web applications
+- Desktop launcher integration
 
 ## Acknowledgments
 

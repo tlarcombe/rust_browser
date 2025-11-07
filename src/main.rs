@@ -72,40 +72,8 @@ impl Browser {
     }
 
     fn setup_callbacks(&self) {
-        let url = self.url.clone();
-
-        // Set up navigation policy to keep links within the same domain
-        self.web_view.connect_decide_policy(move |_webview, decision, decision_type| {
-            if decision_type == PolicyDecisionType::NavigationAction {
-                if let Some(nav_decision) = decision.dynamic_cast_ref::<NavigationPolicyDecision>() {
-                    if let Some(request) = nav_decision.request() {
-                        if let Some(uri) = request.uri() {
-                            let uri_str = uri.as_str();
-
-                            // Extract the base domain from the configured URL
-                            let base_domain = url.split("://")
-                                .nth(1)
-                                .and_then(|s| s.split('/').next())
-                                .unwrap_or("");
-
-                            // Only allow navigation within the same domain
-                            if uri_str.contains(base_domain) {
-                                decision.use_();
-                                return true;
-                            } else {
-                                // Open external links in chromium
-                                let _ = Command::new("/usr/bin/chromium")
-                                    .arg(uri_str)
-                                    .spawn();
-                                decision.ignore();
-                                return true;
-                            }
-                        }
-                    }
-                }
-            }
-            false
-        });
+        // Allow all navigation within the browser (no restrictions)
+        // This enables OAuth flows and logging into websites
 
         let web_view_clone = self.web_view.clone();
         let status_bar_clone = self.status_bar.clone();
@@ -232,5 +200,7 @@ fn main() {
         browser.show();
     });
 
-    app.run();
+    // Use run_with_args(&[]) instead of run() to prevent GTK from trying to parse
+    // command line arguments as files, which causes "can not open files" error
+    app.run_with_args::<String>(&[]);
 }
